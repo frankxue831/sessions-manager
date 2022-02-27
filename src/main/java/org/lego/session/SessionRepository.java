@@ -24,9 +24,7 @@ public interface SessionRepository<S extends Session> {
     S createSession();
 
     /**
-     * Ensures the {@link Session} created by
-     * {@link org.lego.session.SessionRepository#createSession()} is saved.
-     *
+     *保存{@link org.lego.session.SessionRepository#createSession()}创捷的会话
      * <p>
      * Some implementations may choose to save as the {@link Session} is updated by
      * returning a {@link Session} that immediately persists any changes. In this case,
@@ -37,8 +35,7 @@ public interface SessionRepository<S extends Session> {
     void save(S session);
 
     /**
-     * Gets the {@link Session} by the {@link Session#getId()} or null if no
-     * {@link Session} is found.
+     * 通过{@link Session#getId()}获取会话，如果没找到就返回null
      * @param id the {@link org.lego.session.Session#getId()} to lookup
      * @return the {@link Session} by the {@link Session#getId()} or null if no
      * {@link Session} is found.
@@ -46,6 +43,7 @@ public interface SessionRepository<S extends Session> {
     S findById(String id);
 
     /**
+     * 通过会话ID删除会话，如果没找到ID则什么也不做
      * Deletes the {@link Session} with the given {@link Session#getId()} or does nothing
      * if the {@link Session} is not found.
      * @param id the {@link org.lego.session.Session#getId()} to delete
