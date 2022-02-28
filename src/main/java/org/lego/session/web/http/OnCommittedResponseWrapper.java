@@ -1,4 +1,4 @@
-package org.lego.session;
+package org.lego.session.web.http;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -10,8 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
 /**
- * Base class for response wrappers which encapsulate the logic for handling an event when
- * the {@link javax.servlet.http.HttpServletResponse} is committed.
+ * 封装提交{@link javax.servlet.http.HttpServletResponse}的处理逻辑。
  *
  * @author Rob Winch
  * @since 1.0
@@ -33,7 +32,7 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     private long contentWritten;
 
     /**
-     * Create a new {@link OnCommittedResponseWrapper}.
+     *{@link OnCommittedResponseWrapper}的构造器
      * @param response the response to be wrapped
      */
     OnCommittedResponseWrapper(HttpServletResponse response) {
@@ -126,9 +125,9 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
-     * Makes sure {@link OnCommittedResponseWrapper#onResponseCommitted()} is invoked
-     * before calling the <code>getWriter().close()</code> or
-     * <code>getWriter().flush()</code>.
+     * 确保{@link OnCommittedResponseWrapper#onResponseCommitted()}在
+     * 调用<code>getWriter().close()</code>或者<code>getWriter().flush()</code>
+     * 之前调用。
      * @throws IOException if an input or output exception occurred
      */
     @Override
@@ -137,8 +136,9 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
-     * Makes sure {@link OnCommittedResponseWrapper#onResponseCommitted()} is invoked
-     * before calling the superclass <code>flushBuffer()</code>.
+     * 确保{@link OnCommittedResponseWrapper#onResponseCommitted()}在
+     * 调用<code>flushBuffer()</code>
+     * 之前调用。
      * @throws IOException if an input or output exception occurred
      */
     @Override
@@ -188,9 +188,10 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
+     * 计算被写入的content的长度，并检查response是否要提交
      * Adds the contentLengthToWrite to the total contentWritten size and checks to see if
      * the response should be written.
-     * @param contentLengthToWrite the size of the content that is about to be written.
+     * @param contentLengthToWrite 需要被写入的content长度。
      */
     private void checkContentLength(long contentLengthToWrite) {
         this.contentWritten += contentLengthToWrite;
@@ -203,8 +204,8 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
-     * Calls <code>onResponseCommmitted()</code> with the current contents as long as
-     * {@link #disableOnResponseCommitted()} was not invoked.
+     * （只要{@link #disableOnResponseCommitted()}没有被调用），
+     * 调用 <code>onResponseCommmitted()</code>提交。
      */
     private void doOnResponseCommitted() {
         if (!this.disableOnCommitted) {
@@ -214,11 +215,9 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
-     * Ensures {@link OnCommittedResponseWrapper#onResponseCommitted()} is invoked before
-     * calling the prior to methods that commit the response. We delegate all methods to
-     * the original {@link java.io.PrintWriter} to ensure that the behavior is as close to
-     * the original {@link java.io.PrintWriter} as possible. See SEC-2039
-     *
+     * 委托给{@link java.io.PrintWriter}确保
+     * {@link OnCommittedResponseWrapper#onResponseCommitted()}会在提交response之前
+     * <p>可以参考SEC-2039</p>
      * @author Rob Winch
      */
     private class SaveContextPrintWriter extends PrintWriter {
@@ -456,10 +455,9 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
-     * Ensures{@link OnCommittedResponseWrapper#onResponseCommitted()} is invoked before
-     * calling methods that commit the response. We delegate all methods to the original
-     * {@link javax.servlet.ServletOutputStream} to ensure that the behavior is as close
-     * to the original {@link javax.servlet.ServletOutputStream} as possible. See SEC-2039
+     * 委托给{@link javax.servlet.ServletOutputStream}确保
+     * {@link OnCommittedResponseWrapper#onResponseCommitted()}会在提交response之前
+     * <p>可以参考SEC-2039</p>
      *
      * @author Rob Winch
      */

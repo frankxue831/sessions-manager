@@ -1,4 +1,4 @@
-package org.lego.session;
+package org.lego.session.web.http;
 
 import java.io.IOException;
 

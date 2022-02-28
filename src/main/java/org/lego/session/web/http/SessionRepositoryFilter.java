@@ -1,4 +1,4 @@
-package org.lego.session;
+package org.lego.session.web.http;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -17,49 +17,48 @@ import javax.servlet.http.HttpSession;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.lego.session.*;
 
-//import org.lego.core.annotation.Order;
-import org.lego.session.Session;
-import org.lego.session.SessionRepository;
 
 /**
- * Switches the {@link javax.servlet.http.HttpSession} implementation to be backed by a
- * {@link org.lego.session.Session}.
+ * 使用 Filter 把请求拦截，
+ * 然后包装 Request 和 Response，
+ * 使得 Request.getSession 返回的 Session 也是包装过的，
+ * 改变了原有 Session 的行为，重新实现Session接口。
+ * 将原本的{@link HttpSession}实现换成lego session实现。
  *
- * The {@link SessionRepositoryFilter} wraps the
- * {@link javax.servlet.http.HttpServletRequest} and overrides the methods to get an
- * {@link javax.servlet.http.HttpSession} to be backed by a
- * {@link org.lego.session.Session} returned by the
- * {@link org.lego.session.SessionRepository}.
- *
- * The {@link SessionRepositoryFilter} uses a {@link HttpSessionIdResolver} (default
- * {@link CookieHttpSessionIdResolver}) to bridge logic between an
- * {@link javax.servlet.http.HttpSession} and the
- * {@link org.lego.session.Session} abstraction. Specifically:
+ * <p>
+ * {@link SessionRepositoryFilter} 通过 {@link HttpSessionIdResolver} (默认
+ * {@link CookieHttpSessionIdResolver})
+ * 实现{@link HttpSession} 到
+ * {@link Session}映射. 例如:
+ * </p>
  *
  * <ul>
- * <li>The session id is looked up using
- * {@link HttpSessionIdResolver#resolveSessionIds(javax.servlet.http.HttpServletRequest)}
- * . The default is to look in a cookie named SESSION.</li>
- * <li>The session id of newly created {@link org.lego.session.Session} is sent
- * to the client using
- * {@link HttpSessionIdResolver#setSessionId(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse, String)}
- * <li>The client is notified that the session id is no longer valid with
- * {@link HttpSessionIdResolver#expireSession(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)}
+ * <li>
+ *     通过{@link HttpSessionIdResolver#resolveSessionIds(HttpServletRequest)}
+ *     查找session ID
+ *     （默认查找名称为SESSION的cookie）
+ * </li>
+ * <li>
+ *     创建会话{@link Session}并通过
+ *     {@link HttpSessionIdResolver#setSessionId(HttpServletRequest, HttpServletResponse, String)}
+ *     通知客户端session ID。
+ * <li>
+ *     客户端会通过{@link HttpSessionIdResolver#expireSession(HttpServletRequest, HttpServletResponse)}被提示sessionID已失效。
  * </li>
  * </ul>
  *
  * <p>
- * The SessionRepositoryFilter must be placed before any Filter that access the
- * HttpSession or that might commit the response to ensure the session is overridden and
- * persisted properly.
+ *     SessionRepositoryFilter过滤器需要放置在过滤器链的最前端，保证会话被重载和持久化
  * </p>
  *
- * @param <S> the {@link Session} type.
+ * @param <S> {@link Session}的类型.
  * @author Rob Winch
  * @author Vedran Pavic
  * @author Josh Cummings
- * @since 1.0
+ * @author Fengxiang Xue
+ * @since 2022-02-28
  */
 //@Order(SessionRepositoryFilter.DEFAULT_ORDER)
 public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFilter {
@@ -82,6 +81,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
     /**
      * The default filter order.
+     * 默认的过滤器优先顺序
      */
     public static final int DEFAULT_ORDER = Integer.MIN_VALUE + 50;
 
@@ -90,8 +90,8 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
     private HttpSessionIdResolver httpSessionIdResolver = new CookieHttpSessionIdResolver();
 
     /**
-     * Creates a new instance.
-     * @param sessionRepository the <code>SessionRepository</code> to use. Cannot be null.
+     * 构造器，用来创建一个过滤器SessionRepositoryFilter实例。
+     * @param sessionRepository ，不能为空.
      */
     public SessionRepositoryFilter(SessionRepository<S> sessionRepository) {
         if (sessionRepository == null) {
@@ -101,10 +101,8 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
     }
 
     /**
-     * Sets the {@link HttpSessionIdResolver} to be used. The default is a
-     * {@link CookieHttpSessionIdResolver}.
-     * @param httpSessionIdResolver the {@link HttpSessionIdResolver} to use. Cannot be
-     * null.
+     * 设置{@link HttpSessionIdResolver}，默认设置{@link CookieHttpSessionIdResolver}。
+     * @param httpSessionIdResolver 不能为空。
      */
     public void setHttpSessionIdResolver(HttpSessionIdResolver httpSessionIdResolver) {
         if (httpSessionIdResolver == null) {
@@ -116,7 +114,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        request.setAttribute(SESSION_REPOSITORY_ATTR, this.sessionRepository);
+        request.setAttribute(SESSION_REPOSITORY_ATTR, sessionRepository);
 
         SessionRepositoryRequestWrapper wrappedRequest = new SessionRepositoryRequestWrapper(request, response);
         SessionRepositoryResponseWrapper wrappedResponse = new SessionRepositoryResponseWrapper(wrappedRequest,
@@ -137,17 +135,18 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
     }
 
     /**
+     *当 Response 提交后，确保保存会话信息
      * Allows ensuring that the session is saved if the response is committed.
      *
-     * @author Rob Winch
-     * @since 1.0
+     * @author Fengxiang Xue
+     * @since 2022-02-28
      */
     private final class SessionRepositoryResponseWrapper extends OnCommittedResponseWrapper {
 
         private final SessionRepositoryRequestWrapper request;
 
         /**
-         * Create a new {@link SessionRepositoryResponseWrapper}.
+         * 创建一个新的{@link SessionRepositoryResponseWrapper}.
          * @param request the request to be wrapped
          * @param response the response to be wrapped
          */
@@ -161,16 +160,14 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
         @Override
         protected void onResponseCommitted() {
-            this.request.commitSession();
+            request.commitSession();
         }
 
     }
 
     /**
-     * A {@link javax.servlet.http.HttpServletRequest} that retrieves the
-     * {@link javax.servlet.http.HttpSession} using a
-     * {@link org.lego.session.SessionRepository}.
-     *
+     * 重新包装HttpServletRequest，改变原有实现 Session 接口的方式，譬如 getSession、isRequestedSessionIdValid等，
+     * 用来达到改变session存储的方式
      * @author Rob Winch
      * @since 1.0
      */
@@ -194,12 +191,14 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
         }
 
         /**
+         * 通过{@link HttpSessionIdResolver}将sessionID 写入到response中，并将session持久化
          * Uses the {@link HttpSessionIdResolver} to write the session id to the response
          * and persist the Session.
          */
         private void commitSession() {
             HttpSessionWrapper wrappedSession = getCurrentSession();
             if (wrappedSession == null) {
+                //判断ClientSession是否有效，无效则废除对应的session
                 if (isInvalidateClientSession()) {
                     SessionRepositoryFilter.this.httpSessionIdResolver.expireSession(this, this.response);
                 }
@@ -244,25 +243,25 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
         @Override
         public boolean isRequestedSessionIdValid() {
-            if (this.requestedSessionIdValid == null) {
+            if (requestedSessionIdValid == null) {
                 S requestedSession = getRequestedSession();
                 if (requestedSession != null) {
                     requestedSession.setLastAccessedTime(Instant.now());
                 }
                 return isRequestedSessionIdValid(requestedSession);
             }
-            return this.requestedSessionIdValid;
+            return requestedSessionIdValid;
         }
 
         private boolean isRequestedSessionIdValid(S session) {
-            if (this.requestedSessionIdValid == null) {
-                this.requestedSessionIdValid = session != null;
+            if (requestedSessionIdValid == null) {
+                requestedSessionIdValid = session != null;
             }
-            return this.requestedSessionIdValid;
+            return requestedSessionIdValid;
         }
 
         private boolean isInvalidateClientSession() {
-            return getCurrentSession() == null && this.requestedSessionInvalidated;
+            return getCurrentSession() == null && requestedSessionInvalidated;
         }
 
         @Override
@@ -275,7 +274,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
             if (requestedSession != null) {
                 if (getAttribute(INVALID_SESSION_ID_ATTR) == null) {
                     requestedSession.setLastAccessedTime(Instant.now());
-                    this.requestedSessionIdValid = true;
+                    requestedSessionIdValid = true;
                     currentSession = new HttpSessionWrapper(requestedSession, getServletContext());
                     currentSession.markNotNew();
                     setCurrentSession(currentSession);
@@ -318,10 +317,10 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
 
         @Override
         public String getRequestedSessionId() {
-            if (this.requestedSessionId == null) {
+            if (requestedSessionId == null) {
                 getRequestedSession();
             }
-            return this.requestedSessionId;
+            return requestedSessionId;
         }
 
         @Override
@@ -356,8 +355,9 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
         }
 
         /**
-         * Allows creating an HttpSession from a Session instance.
          *
+         * Allows creating an HttpSession from a Session instance.
+         * 新建HttpSession
          * @author Rob Winch
          * @since 1.0
          */
