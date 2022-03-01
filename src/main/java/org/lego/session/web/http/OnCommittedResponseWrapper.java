@@ -65,6 +65,9 @@ abstract class OnCommittedResponseWrapper extends HttpServletResponseWrapper {
     }
 
     /**
+     * <p>
+     *     调用此方法可以禁用{@link OnCommittedResponseWrapper#onResponseCommitted()}
+     * </p>
      * Invoke this method to disable invoking
      * {@link OnCommittedResponseWrapper#onResponseCommitted()} when the
      * {@link javax.servlet.http.HttpServletResponse} is committed. This can be useful in

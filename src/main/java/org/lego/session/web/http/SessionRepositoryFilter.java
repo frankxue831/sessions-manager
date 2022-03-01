@@ -191,7 +191,10 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
         }
 
         /**
-         * 通过{@link HttpSessionIdResolver}将sessionID 写入到response中，并将session持久化
+         * <p>
+         *     通过{@link HttpSessionIdResolver}将sessionID 写入到response中，并将session持久化。
+         *
+         * </p>
          * Uses the {@link HttpSessionIdResolver} to write the session id to the response
          * and persist the Session.
          */
