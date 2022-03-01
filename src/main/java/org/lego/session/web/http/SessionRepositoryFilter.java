@@ -267,6 +267,7 @@ public class SessionRepositoryFilter<S extends Session> extends OncePerRequestFi
             return getCurrentSession() == null && requestedSessionInvalidated;
         }
 
+        //
         @Override
         public HttpSessionWrapper getSession(boolean create) {
             HttpSessionWrapper currentSession = getCurrentSession();
